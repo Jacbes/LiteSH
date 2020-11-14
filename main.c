@@ -1,10 +1,10 @@
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/wait.h>
-
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <signal.h>
 #include <pthread.h>
+#include <wait.h>
 
 #define SHELL "/bin/sh"
 
@@ -26,12 +26,13 @@ int create_process(const char *command) {
 
     return status;
 }
-void *threadFunc(void* thread_data){
+
+void *thread_function(void* thread_data){
     create_process(thread_data);
     pthread_exit(0);
 }
 
-int sendsig(pid_t pid, int signum) {
+int send_signal(pid_t pid, int signum) {
     if (kill(pid, signum) == -1) {
         return 1;
     }
@@ -39,70 +40,95 @@ int sendsig(pid_t pid, int signum) {
     return 0;
 }
 
-void sighandler(int signum) {
-    printf("Signal received successfully\n");
+void signal_handler(int signumber) {
+    printf("\nSignal - %d received successfully (Press Enter...)\n", signumber);
 }
 
-int recvsign(int signum) {
-    if (signal(signum, sighandler) == SIG_ERR) {
+int receive_signal(int signumber) {
+    if (signal(signumber, signal_handler) == SIG_ERR) {
         return 1;
     }
 
     return 0;
 }
 
-int main(int argc, char* argv[]) {
+int main() {
     char *line = NULL;
+    char *lin1 = NULL, *lin2 = NULL;
     size_t len = 0;
     char *choice = NULL;
 
     int exit = 0;
     while (!exit) {
-        printf("1 create process\n"
-                      "2 create background process\n"
-                      "3 exit\n");
+        printf("<=>Welcome to LiteSH<=>\n"
+               "1 create process\n"
+               "2 create background process\n"
+               "3 send signal\n"
+               "4 receive signal\n"
+               "5 help\n"
+               "6 exit\n");
+        printf("Enter key: ");
         getline(&choice, &len, stdin);
         choice[strlen(choice) - 1] = '\0';
         if (!strcmp(choice, "1")) {
+            printf("Enter name of process: ");
             getline(&line, &len, stdin);
             line[strlen(line) - 1] = '\0';
-            if(!strcmp(line, "exit")) {
-                exit++;
-            }
             create_process(line);
-            printf("Procces over...\n");
+            printf(">->->Procces over<-<-<\n");
         } else if (!strcmp(choice, "2")) {
+            printf("Enter name of process: ");
             getline(&line, &len, stdin);
             line[strlen(line) - 1] = '\0';
-            if(!strcmp(line, "exit")) {
-                exit++;
-            }
             void *thread_data = line;
             pthread_t thread;
-            pthread_create(&thread, NULL, threadFunc, thread_data);
+            pthread_create(&thread, NULL, thread_function, thread_data);
 //            pthread_join(thread, NULL);
         } else if (!strcmp(choice, "3")) {
-            exit++;
-        } else if (!strcmp(choice, "4")) {
-            char *lin1 = NULL, *lin2 = NULL;
-            printf("pid\n");
+            printf("Enter PID: ");
             getline(&lin1, &len, stdin);
             lin1[strlen(lin1) - 1] = '\0';
-            printf("signum\n");
+            printf("Enter Signal Number: ");
             getline(&lin2, &len, stdin);
             lin2[strlen(lin2) - 1] = '\0';
-            sendsig(atoi(lin1), atoi(lin2));
-        } else if (!strcmp(choice, "5")) {
-            int signum;
-            printf("signal to receive: ");
-            scanf("%d", signum);
-            if (recvsign(signum) == 1) {
-                printf("failed to receive signal\n");
+            send_signal(atoi(lin1), atoi(lin2));
+        } else if (!strcmp(choice, "4")) {
+            printf("Enter Signal Number: ");
+            getline(&line, &len, stdin);
+            line[strlen(line) - 1] = '\0';
+            if (receive_signal(atoi(line)) == 1) {
+                printf("Failed to receive signal\n");
             }
+        } else if (!strcmp(choice, "5")) {
+            printf("/This programm can send and receive signals to/from processes\n"
+                   "/and create processes.\n"
+                   ".To create process enter 1, next type the name of process\n"
+                   " programm create process with this command.\n"
+                   " (Enter name of programm on your computer)\n"
+                   ".To create background process enter 2, type name\n"
+                   " programm do the same things as create ordionary process,\n"
+                   " but created process will running on another thread.\n"
+                   " (Enter name of programm on your computer)\n"
+                   ".To send signal enter 3, type Process ID, and number of\n"
+                   " signal.\n"
+                   " (PID: 777777, Signal: 15)\n"
+                   ".To receive signal enter 4, type number of signal, when\n"
+                   " process receive this signal, you will see message -\n"
+                   " \"Signal - {number of signal} received successfully\"\n"
+                   ".To get help enter 5.\n"
+                   ".To exit enter 6.\n"
+                   "Authors: Besedin Iakov, Melnikov Ivan.\n");
+            printf("Press Enter...");
+            getchar();
+        } else if (!strcmp(choice, "6")) {
+            exit++;
         } else {
             printf("Wrong key\n");
         }
     }
+    free(line);
+    free(lin1);
+    free(lin2);
 
     return 0;
 }
