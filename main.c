@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <signal.h>
-#include <pthread.h>
 #include <wait.h>
 
 #define SHELL "/bin/sh"
@@ -27,9 +26,23 @@ int create_process(const char *command) {
     return status;
 }
 
-void *thread_function(void* thread_data){
-    create_process(thread_data);
-    pthread_exit(0);
+int create_background_process(const char *command) {
+    int status = 0;
+    pid_t pid;
+
+    pid = fork();
+    if (pid == 0) {
+        setsid();
+        fclose(stdin);
+        fclose(stdout);
+        fclose(stderr);
+        execl(SHELL, SHELL, "-c", command, NULL);
+        _exit(EXIT_FAILURE);
+    } else if (pid < 0) {
+        status = -1;
+    }
+
+    return status;
 }
 
 int send_signal(pid_t pid, int signum) {
@@ -80,10 +93,7 @@ int main() {
             printf("Enter name of process: ");
             getline(&line, &len, stdin);
             line[strlen(line) - 1] = '\0';
-            void *thread_data = line;
-            pthread_t thread;
-            pthread_create(&thread, NULL, thread_function, thread_data);
-//            pthread_join(thread, NULL);
+            create_background_process(line);
         } else if (!strcmp(choice, "3")) {
             printf("Enter PID: ");
             getline(&lin1, &len, stdin);
