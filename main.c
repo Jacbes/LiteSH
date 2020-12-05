@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <wait.h>
+#include <dlfcn.h> //заголовочный файл для работы с динамическими библиотеками
 
 #define SHELL "/bin/sh"
 
@@ -54,7 +55,7 @@ int send_signal(pid_t pid, int signum) {
 }
 
 void signal_handler(int signumber) {
-    printf("\nSignal - %d received successfully (Press Enter...)\n", signumber);
+    printf("\nSignal - %d received successfully (Press Enter...)\n\n", signumber);
 }
 
 int receive_signal(int signumber) {
@@ -71,6 +72,9 @@ int main() {
     size_t len = 0;
     char *choice = NULL;
 
+    void *cstrings_library;
+    int (*slenfunc)(char *str);
+
     int exit = 0;
     while (!exit) {
         printf("<=>Welcome to LiteSH<=>\n"
@@ -79,19 +83,22 @@ int main() {
                "3 send signal\n"
                "4 receive signal\n"
                "5 help\n"
-               "6 exit\n");
+               "6 search palindrom\n"
+               "7 exit\n\n");
         printf("Enter key: ");
         getline(&choice, &len, stdin);
         choice[strlen(choice) - 1] = '\0';
-        if (!strcmp(choice, "1")) {
+        if (!strcmp(choice, "1")) 
+        {
             printf("Enter name of process: ");
             getline(&line, &len, stdin);
             line[strlen(line) - 1] = '\0';
             create_process(line);
-            printf(">->->Procces over<-<-<\n");
+            printf(">->->Procces over<-<-<\n\n");
         } else if (!strcmp(choice, "2")) {
             printf("Enter name of process: ");
             getline(&line, &len, stdin);
+            printf("\n");
             line[strlen(line) - 1] = '\0';
             create_background_process(line);
         } else if (!strcmp(choice, "3")) {
@@ -100,14 +107,16 @@ int main() {
             lin1[strlen(lin1) - 1] = '\0';
             printf("Enter Signal Number: ");
             getline(&lin2, &len, stdin);
+            printf("\n");
             lin2[strlen(lin2) - 1] = '\0';
             send_signal(atoi(lin1), atoi(lin2));
         } else if (!strcmp(choice, "4")) {
             printf("Enter Signal Number: ");
             getline(&line, &len, stdin);
+            printf("\n");
             line[strlen(line) - 1] = '\0';
             if (receive_signal(atoi(line)) == 1) {
-                printf("Failed to receive signal\n");
+                printf("Failed to receive signal\n\n");
             }
         } else if (!strcmp(choice, "5")) {
             printf("/This programm can send and receive signals to/from processes\n"
@@ -126,12 +135,24 @@ int main() {
                    " process receive this signal, you will see message -\n"
                    " \"Signal - {number of signal} received successfully\"\n"
                    ".To get help enter 5.\n"
-                   ".To exit enter 6.\n"
-                   "Authors: Besedin Iakov, Melnikov Ivan.\n");
+                   ".To test dynamic library function enter 6.\n"
+                   " (Enter path to the text file)"
+                   ".To exit enter 7.\n"
+                   "Authors: Besedin Iakov, Melnikov Ivan.\n\n");
             printf("Press Enter...");
             getchar();
-        } else if (!strcmp(choice, "6")) {
+        } else if (!strcmp(choice, "7")) {
             exit++;
+        } else if (!strcmp(choice, "6")) {
+            cstrings_library = dlopen("./libstrings.so", RTLD_LAZY);
+            if (!cstrings_library)
+            {
+                fprintf(stderr,"dlopen() error: %s\n", dlerror());
+                return 1;
+            };
+            slenfunc = dlsym(cstrings_library, "slen");
+            printf("\"This line have length\" = %d\n\n", (*slenfunc)("This line have length"));
+            dlclose(cstrings_library); 
         } else {
             printf("Wrong key\n");
         }
